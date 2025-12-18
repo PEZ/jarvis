@@ -39,44 +39,63 @@
 
   ;; --- Grep shortcuts (menu:*) ---
 
-  menu:panic {:doc "Panic/watchdog/jetsam in reboot logs"
+  menu:panic {:doc "Panic/watchdog/jetsam: live logs + historical"
               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                       (shell "bash" "-c"
-                             (str "cd " snaps " && "
+                             (str "echo '=== CURRENT (last 10m) ===' && "
+                                  "(log show --last 10m --predicate 'eventMessage CONTAINS \"panic\" OR eventMessage CONTAINS \"watchdog\" OR eventMessage CONTAINS \"jetsam\" OR eventMessage CONTAINS \"GPU Restart\" OR eventMessage CONTAINS \"hang\"' 2>/dev/null | "
+                                  "egrep -v 'AppleLOM.Watchdog|corespeech' | head -50 || echo '(no recent events)') && "
+                                  "echo && echo '=== HISTORICAL ===' && "
+                                  "cd " snaps " && "
                                   "egrep -n 'panic|watchdog|jetsam|memorystatus|vm_pageout|GPU Restart|IOMFB|WindowServer|hang|stall|killed' reboot-*.txt 2>/dev/null | "
                                   "egrep -v 'Ignoring GPU update|not memory-managed|AppleLOM.Watchdog|corespeech' | "
-                                  "head -200 || echo '(no matches)'")))}
+                                  "head -150 || echo '(no matches)'")))}
 
-  menu:reboot {:doc "Reboot cause evidence (panic/watchdog/shutdown)"
+  menu:reboot {:doc "Reboot cause: live logs + historical"
                :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                        (shell "bash" "-c"
-                              (str "cd " snaps " && "
+                              (str "echo '=== CURRENT (shutdown cause) ===' && "
+                                   "(log show --last 30m --predicate 'eventMessage CONTAINS \"Previous shutdown cause\" OR eventMessage CONTAINS \"panic\" OR eventMessage CONTAINS \"BSD process name\"' 2>/dev/null | head -20 || echo '(no recent events)') && "
+                                   "echo && echo '=== HISTORICAL ===' && "
+                                   "cd " snaps " && "
                                    "egrep -n 'panic|Userspace watchdog|watchdogd|Previous shutdown cause|BSD process name' reboot-*.txt 2>/dev/null | "
                                    "egrep -v 'AppleLOM.Watchdog' | "
-                                   "head -200 || echo '(no matches)'")))}
+                                   "head -150 || echo '(no matches)'")))}
 
-  menu:jetsam {:doc "Kernel memory kills (jetsam/memorystatus)"
+  menu:jetsam {:doc "Kernel memory kills: live logs + historical"
                :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                        (shell "bash" "-c"
-                              (str "cd " snaps " && "
+                              (str "echo '=== CURRENT (last 10m) ===' && "
+                                   "(log show --last 10m --predicate 'eventMessage CONTAINS \"jetsam\" OR eventMessage CONTAINS \"memorystatus\" OR eventMessage CONTAINS \"killed\" OR eventMessage CONTAINS \"vm_pressure\"' 2>/dev/null | "
+                                   "egrep -v 'not memory-managed|is not RunningBoard jetsam' | head -50 || echo '(no recent events)') && "
+                                   "echo && echo '=== HISTORICAL ===' && "
+                                   "cd " snaps " && "
                                    "egrep -n 'jetsam|memorystatus|killed process|kill cause|vm_pressure|low memory|purgeable|coalition' reboot-*.txt 2>/dev/null | "
                                    "egrep -v 'not memory-managed|is not RunningBoard jetsam' | "
-                                   "head -200 || echo '(no matches)'")))}
+                                   "head -150 || echo '(no matches)'")))}
 
-  menu:brave {:doc "Brave browser memory/GPU issues"
+  menu:brave {:doc "Brave browser: live processes + historical"
               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                       (shell "bash" "-c"
-                             (str "cd " snaps " && "
+                             (str "echo '=== CURRENT ===' && "
+                                  "ps aux | head -1 && "
+                                  "(ps aux | grep -i 'Brave' | grep -v grep || echo '(Brave not running)') && "
+                                  "echo && echo '=== HISTORICAL ===' && "
+                                  "cd " snaps " && "
                                   "egrep -n 'Brave.*(GPU|videoencoder|jetsam|killed|suspend|resume|stalled|hang|coalition|memoryLimit|RunningBoard)' *.txt 2>/dev/null | "
                                   "egrep -v 'not memory-managed' | "
-                                  "head -200 || echo '(no matches)'")))}
+                                  "head -150 || echo '(no matches)'")))}
 
-  menu:vscode {:doc "VS Code / JVM / Node memory pressure"
+  menu:vscode {:doc "VS Code / JVM / Node: live processes + historical"
                :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                        (shell "bash" "-c"
-                              (str "cd " snaps " && "
+                              (str "echo '=== CURRENT ===' && "
+                                   "ps aux | head -1 && "
+                                   "(ps aux | egrep -i 'Code Helper|Electron|java|clojure|node' | grep -v grep | head -30 || echo '(none running)') && "
+                                   "echo && echo '=== HISTORICAL ===' && "
+                                   "cd " snaps " && "
                                    "egrep -n 'Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed' heavy-*.txt 2>/dev/null | "
-                                   "head -200 || echo '(no matches)'")))}
+                                   "head -150 || echo '(no matches)'")))}
 
   menu:insiders {:doc "VS Code Insiders: live + historical snapshots"
                  :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
@@ -89,13 +108,17 @@
                                      "egrep -in 'Code - Insiders|Code Helper.*Insiders|extensionHost|shared-process|ptyHost' *.txt 2>/dev/null | "
                                      "head -200 || echo '(no matches)'")))}
 
-  menu:electron {:doc "Electron/Chromium helper buildup (renderer, GPU, utility)"
+  menu:electron {:doc "Electron/Chromium helpers: live + historical"
                  :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                          (shell "bash" "-c"
-                                (str "cd " snaps " && "
+                                (str "echo '=== CURRENT ===' && "
+                                     "ps aux | head -1 && "
+                                     "(ps aux | egrep -i 'Helper.*(Renderer|GPU|Plugin)|utility-network|crashpad' | grep -v 'Brave\\|Chrome' | grep -v grep | head -30 || echo '(none)') && "
+                                     "echo && echo '=== HISTORICAL ===' && "
+                                     "cd " snaps " && "
                                      "egrep -n 'Helper.*Renderer|Helper.*GPU|Helper.*Plugin|utility-network|gpu-process|crashpad' *.txt 2>/dev/null | "
                                      "egrep -v 'Brave|Chrome' | "
-                                     "head -200 || echo '(no matches)'")))}
+                                     "head -150 || echo '(no matches)'")))}
 
   menu:metrics {:doc "Memory metrics: live + historical snapshots"
                 :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
