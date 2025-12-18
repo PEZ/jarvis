@@ -37,43 +37,50 @@
                             "egrep -v 'Ignoring GPU update because this process is not GPU managed' | "
                             "head -200")))}
 
-  menu {:doc "Grep menu. 'bb menu' lists options. 'bb menu A' runs option A."
-        :task (let [root (str (System/getProperty "user.home") "/mem-debug")
-                    snaps (str root "/snaps")
-                    choice (some-> (first *command-line-args*) .toUpperCase)
-                    patterns
-                    {"A" {:desc "Panic/watchdog/jetsam (filtered)"
-                          :pattern "panic|watchdog|jetsam|memorystatus|vm_pageout|GPU Restart|IOMFB|WindowServer|hang|stall|killed"
-                          :glob "reboot-*.txt"}
-                     "B" {:desc "Panic/watchdog evidence only"
-                          :pattern "panic|watchdog|Userspace watchdog|watchdogd|Previous shutdown cause|BSD process name"
-                          :glob "reboot-*.txt"}
-                     "C" {:desc "Kernel memory kills (jetsam)"
-                          :pattern "jetsam|memorystatus|killed process|kill cause|vm_pressure|low memory|purgeable|coalition"
-                          :glob "reboot-*.txt"}
-                     "D" {:desc "Brave browser issues"
-                          :pattern "Brave.*(GPU|videoencoder|jetsam|killed|suspend|resume|stalled|hang|coalition|memoryLimit|RunningBoard)"
-                          :glob "*.txt"}
-                     "E" {:desc "VS Code / JVM / REPL pressure"
-                          :pattern "Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed"
-                          :glob "heavy-*.txt"}
-                     "F" {:desc "Memory metrics summary"
-                          :pattern "swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus"
-                          :glob "lite-*.txt"}}]
-                (if-let [{:keys [desc pattern glob]} (get patterns choice)]
-                  (do
-                    (println (str "\n--- " desc " [" glob "] ---\n"))
-                    (shell "bash" "-c"
-                           (str "cd " snaps " && "
-                                "egrep -n '" pattern "' " glob " 2>/dev/null | "
-                                "egrep -v 'Ignoring GPU update|not memory-managed|WatchDogTimer|corespeech' | "
-                                "head -200 || echo '(no matches)'")))
-                  (do
-                    (println "\n=== Memory Debug Grep Menu ===")
-                    (println "Usage: bb menu <letter>\n")
-                    (doseq [[k {:keys [desc glob]}] (sort patterns)]
-                      (println (str "  " k "  " desc " [" glob "]")))
-                    (println "\nExample: bb menu A"))))}}}
+  ;; --- Grep shortcuts (menu:*) ---
 
+  menu:panic {:doc "Panic/watchdog/jetsam in reboot logs"
+              :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                      (shell "bash" "-c"
+                             (str "cd " snaps " && "
+                                  "egrep -n 'panic|watchdog|jetsam|memorystatus|vm_pageout|GPU Restart|IOMFB|WindowServer|hang|stall|killed' reboot-*.txt 2>/dev/null | "
+                                  "egrep -v 'Ignoring GPU update|not memory-managed|AppleLOM.Watchdog|corespeech' | "
+                                  "head -200 || echo '(no matches)'")))}
 
+  menu:reboot {:doc "Reboot cause evidence (panic/watchdog/shutdown)"
+               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                       (shell "bash" "-c"
+                              (str "cd " snaps " && "
+                                   "egrep -n 'panic|Userspace watchdog|watchdogd|Previous shutdown cause|BSD process name' reboot-*.txt 2>/dev/null | "
+                                   "egrep -v 'AppleLOM.Watchdog' | "
+                                   "head -200 || echo '(no matches)'")))}
 
+  menu:jetsam {:doc "Kernel memory kills (jetsam/memorystatus)"
+               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                       (shell "bash" "-c"
+                              (str "cd " snaps " && "
+                                   "egrep -n 'jetsam|memorystatus|killed process|kill cause|vm_pressure|low memory|purgeable|coalition' reboot-*.txt 2>/dev/null | "
+                                   "egrep -v 'not memory-managed|is not RunningBoard jetsam' | "
+                                   "head -200 || echo '(no matches)'")))}
+
+  menu:brave {:doc "Brave browser memory/GPU issues"
+              :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                      (shell "bash" "-c"
+                             (str "cd " snaps " && "
+                                  "egrep -n 'Brave.*(GPU|videoencoder|jetsam|killed|suspend|resume|stalled|hang|coalition|memoryLimit|RunningBoard)' *.txt 2>/dev/null | "
+                                  "egrep -v 'not memory-managed' | "
+                                  "head -200 || echo '(no matches)'")))}
+
+  menu:vscode {:doc "VS Code / JVM / Node memory pressure"
+               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                       (shell "bash" "-c"
+                              (str "cd " snaps " && "
+                                   "egrep -n 'Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed' heavy-*.txt 2>/dev/null | "
+                                   "head -200 || echo '(no matches)'")))}
+
+  menu:metrics {:doc "Memory metrics summary (swap/pressure/pageouts)"
+                :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                        (shell "bash" "-c"
+                               (str "cd " snaps " && "
+                                    "egrep -n 'swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus' lite-*.txt 2>/dev/null | "
+                                    "head -200 || echo '(no matches)'")))}}}
