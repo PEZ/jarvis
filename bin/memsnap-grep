@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="${HOME}/mem-debug"
+SNAPS="${ROOT}/snaps"
+PATTERN="${1:-swapusage|memory_pressure|Jetsam|jetsam|compress|VM|GPU|panic|watchdog|pageouts}"
+FILES="${2:-$SNAPS/*.txt}"
+for f in $FILES; do
+  [ -f "$f" ] || continue
+  echo "==== $f ===="
+  ((egrep -n "$PATTERN" "$f" || true) | head -200) || true
+  echo
+done

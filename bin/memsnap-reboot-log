@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="${HOME}/mem-debug"
+SNAPS="${ROOT}/snaps"
+mkdir -p "$SNAPS"
+TS="$(date +"%Y%m%d-%H%M%S")"
+OUT="$SNAPS/reboot-$TS.txt"
+{
+  echo "=== Previous shutdown cause ==="
+  log show --last 30m --predicate 'eventMessage CONTAINS "Previous shutdown cause"' --style compact 2>/dev/null | head -10 || true
+  echo ""
+  echo "=== Panic/crash/jetsam events ==="
+  log show --last 30m --style compact --predicate '
+    (eventMessage CONTAINS "panic") OR
+    (eventMessage CONTAINS "kernel_panic") OR
+    (eventMessage CONTAINS "Userspace watchdog timeout") OR
+    (eventMessage CONTAINS "jetsam" AND eventMessage CONTAINS "killed") OR
+    (eventMessage CONTAINS "memorystatus" AND eventMessage CONTAINS "kill") OR
+    (eventMessage CONTAINS "GPU Restart") OR
+    (process == "ReportCrash")
+  ' 2>/dev/null | egrep -v "Ignoring GPU update|Ignoring jetsam|WatchDogTimer|not GPU managed|not memory-managed|corespeech" | head -500 || true
+} > "$OUT"
+echo "$OUT"

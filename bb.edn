@@ -1,0 +1,79 @@
+{:paths []
+ :tasks
+ {snap {:doc "Baseline / dialog / feels off. Compact snapshot."
+        :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
+                (shell (str root "/bin/memsnap-lite")))}
+
+  heavy {:doc "Severe incident snapshot."
+         :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
+                 (shell (str root "/bin/memsnap-heavy")))}
+
+  reboot-log {:doc "After unexpected reboot: panic/watchdog/GPU logs from last 2h."
+              :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
+                      (shell (str root "/bin/memsnap-reboot-log")))}
+
+  latest {:doc "Print newest snapshot filename."
+          :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
+                  (shell (str root "/bin/memsnap-latest")))}
+
+  summarize {:doc "Summarize newest snapshot (key terms)."
+             :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
+                     (shell "bash" "-lc"
+                            (str "f=$(" root "/bin/memsnap-latest 2>/dev/null || true); "
+                                 "if [ -n \"$f\" ]; then "
+                                 root "/bin/memsnap-grep "
+                                 "\"swapusage|memory_pressure|Filesystem|/dev|pageouts|compress|VM|GPU|panic|watchdog|jetsam\" "
+                                 "\"$f\"; "
+                                 "else echo \"No snaps found in " root "/snaps\"; fi")))}
+
+  grep {:doc "Grep snapshots for a pattern. Usage: bb grep \"pattern\" [glob]"
+        :task (let [root (str (System/getProperty "user.home") "/mem-debug")
+                    pattern (or (first *command-line-args*)
+                                "swapusage|memory_pressure|Filesystem|/dev|pageouts|compress|VM|GPU|panic|watchdog|jetsam|memorystatus")
+                    glob (or (second *command-line-args*) "*.txt")]
+                (shell "bash" "-c"
+                       (str "cd " root "/snaps && "
+                            "egrep -n '" pattern "' " glob " 2>/dev/null | "
+                            "egrep -v 'Ignoring GPU update because this process is not GPU managed' | "
+                            "head -200")))}
+
+  menu {:doc "Grep menu. 'bb menu' lists options. 'bb menu A' runs option A."
+        :task (let [root (str (System/getProperty "user.home") "/mem-debug")
+                    snaps (str root "/snaps")
+                    choice (some-> (first *command-line-args*) .toUpperCase)
+                    patterns
+                    {"A" {:desc "Panic/watchdog/jetsam (filtered)"
+                          :pattern "panic|watchdog|jetsam|memorystatus|vm_pageout|GPU Restart|IOMFB|WindowServer|hang|stall|killed"
+                          :glob "reboot-*.txt"}
+                     "B" {:desc "Panic/watchdog evidence only"
+                          :pattern "panic|watchdog|Userspace watchdog|watchdogd|Previous shutdown cause|BSD process name"
+                          :glob "reboot-*.txt"}
+                     "C" {:desc "Kernel memory kills (jetsam)"
+                          :pattern "jetsam|memorystatus|killed process|kill cause|vm_pressure|low memory|purgeable|coalition"
+                          :glob "reboot-*.txt"}
+                     "D" {:desc "Brave browser issues"
+                          :pattern "Brave.*(GPU|videoencoder|jetsam|killed|suspend|resume|stalled|hang|coalition|memoryLimit|RunningBoard)"
+                          :glob "*.txt"}
+                     "E" {:desc "VS Code / JVM / REPL pressure"
+                          :pattern "Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed"
+                          :glob "heavy-*.txt"}
+                     "F" {:desc "Memory metrics summary"
+                          :pattern "swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus"
+                          :glob "lite-*.txt"}}]
+                (if-let [{:keys [desc pattern glob]} (get patterns choice)]
+                  (do
+                    (println (str "\n--- " desc " [" glob "] ---\n"))
+                    (shell "bash" "-c"
+                           (str "cd " snaps " && "
+                                "egrep -n '" pattern "' " glob " 2>/dev/null | "
+                                "egrep -v 'Ignoring GPU update|not memory-managed|WatchDogTimer|corespeech' | "
+                                "head -200 || echo '(no matches)'")))
+                  (do
+                    (println "\n=== Memory Debug Grep Menu ===")
+                    (println "Usage: bb menu <letter>\n")
+                    (doseq [[k {:keys [desc glob]}] (sort patterns)]
+                      (println (str "  " k "  " desc " [" glob "]")))
+                    (println "\nExample: bb menu A"))))}}}
+
+
+

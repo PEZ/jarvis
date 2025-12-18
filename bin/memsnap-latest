@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="${HOME}/mem-debug"
+SNAPS="${ROOT}/snaps"
+ls -1t "$SNAPS"/*.txt 2>/dev/null | head -1
