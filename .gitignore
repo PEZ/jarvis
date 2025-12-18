@@ -1,1 +1,33 @@
+# Generated snapshots and diagnostics
 snaps/
+*.log
+*.err
+
+# Calva
+.calva/
+.clj-kondo/.cache/
+.lsp/.cache/
+
+# REPL history and output
+.nrepl-port
+.repl-history
+
+# Babashka
+bb.edn.local
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+*.iml
+
+# Temporary files
+.env.local
+tmp/
+temp/
