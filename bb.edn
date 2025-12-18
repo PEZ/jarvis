@@ -97,6 +97,17 @@
                                    "egrep -n 'Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed' heavy-*.txt 2>/dev/null | "
                                    "head -150 || echo '(no matches)'")))}
 
+  menu:clojure-lsp {:doc "clojure-lsp processes: live + historical"
+                   :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                           (shell "bash" "-c"
+                                  (str "echo '=== CURRENT ===' && "
+                                       "ps aux | head -1 && "
+                                       "(ps aux | egrep -i 'clojure-lsp|clj-kondo' | grep -v grep || echo '(none running)') && "
+                                       "echo && echo '=== HISTORICAL ===' && "
+                                       "cd " snaps " && "
+                                       "egrep -in 'clojure-lsp|clj-kondo' *.txt 2>/dev/null | "
+                                       "head -150 || echo '(no matches)'")))}
+
   menu:insiders {:doc "VS Code Insiders: live + historical snapshots"
                  :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                          (shell "bash" "-c"
