@@ -78,12 +78,16 @@
                                    "egrep -n 'Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed' heavy-*.txt 2>/dev/null | "
                                    "head -200 || echo '(no matches)'")))}
 
-  menu:insiders {:doc "VS Code Insiders processes across all snapshots"
+  menu:insiders {:doc "VS Code Insiders: live + historical snapshots"
                  :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                          (shell "bash" "-c"
-                                (str "cd " snaps " && "
+                                (str "echo '=== CURRENT ===' && "
+                                     "ps aux | head -1 && "
+                                     "ps aux | egrep -i 'Code.*Insiders|extensionHost|shared-process|ptyHost' | grep -v grep && "
+                                     "echo && echo '=== HISTORICAL ===' && "
+                                     "cd " snaps " && "
                                      "egrep -in 'Code - Insiders|Code Helper.*Insiders|extensionHost|shared-process|ptyHost' *.txt 2>/dev/null | "
-                                     "head -300 || echo '(no matches)'")))}
+                                     "head -200 || echo '(no matches)'")))}
 
   menu:electron {:doc "Electron/Chromium helper buildup (renderer, GPU, utility)"
                  :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
@@ -93,9 +97,15 @@
                                      "egrep -v 'Brave|Chrome' | "
                                      "head -200 || echo '(no matches)'")))}
 
-  menu:metrics {:doc "Memory metrics summary (swap/pressure/pageouts)"
+  menu:metrics {:doc "Memory metrics: live + historical snapshots"
                 :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                         (shell "bash" "-c"
-                               (str "cd " snaps " && "
+                               (str "echo '=== CURRENT ===' && "
+                                    "sysctl vm.swapusage && "
+                                    "echo '---' && memory_pressure | head -5 && "
+                                    "echo '---' && vm_stat | egrep -i 'pageout|compress|wired' && "
+                                    "echo '---' && top -l 1 -n 0 -s 0 | grep PhysMem && "
+                                    "echo && echo '=== HISTORICAL ===' && "
+                                    "cd " snaps " && "
                                     "egrep -n 'swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus' lite-*.txt 2>/dev/null | "
                                     "head -200 || echo '(no matches)'")))}}}
