@@ -1,173 +1,58 @@
-{:paths []
+{:paths ["scripts"]
  :tasks
- {snap {:doc "Baseline / dialog / feels off. Compact snapshot."
-        :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
-                (shell (str root "/bin/memsnap-lite")))}
+ {:requires ([tasks])
 
-  heavy {:doc "Severe incident snapshot."
-         :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
-                 (shell (str root "/bin/memsnap-heavy")))}
+  snap          {:doc "Baseline / dialog / feels off. Compact snapshot."
+                 :task tasks/snap!}
 
-  reboot-log {:doc "After unexpected reboot: panic/watchdog/GPU logs from last 2h."
-              :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
-                      (shell (str root "/bin/memsnap-reboot-log")))}
+  heavy         {:doc "Severe incident snapshot."
+                 :task tasks/heavy!}
 
-  latest {:doc "Print newest snapshot filename."
-          :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
-                  (shell (str root "/bin/memsnap-latest")))}
+  reboot-log    {:doc "After unexpected reboot: panic/watchdog/GPU logs from last 2h."
+                 :task tasks/reboot-log!}
 
-  summarize {:doc "Summarize newest snapshot (key terms)."
-             :task (let [root (str (System/getProperty "user.home") "/mem-debug")]
-                     (shell "bash" "-lc"
-                            (str "f=$(" root "/bin/memsnap-latest 2>/dev/null || true); "
-                                 "if [ -n \"$f\" ]; then "
-                                 root "/bin/memsnap-grep "
-                                 "\"swapusage|memory_pressure|Filesystem|/dev|pageouts|compress|VM|GPU|panic|watchdog|jetsam\" "
-                                 "\"$f\"; "
-                                 "else echo \"No snaps found in " root "/snaps\"; fi")))}
+  latest        {:doc "Print newest snapshot filename."
+                 :task tasks/latest}
 
-  grep {:doc "Grep snapshots for a pattern. Usage: bb grep \"pattern\" [glob]"
-        :task (let [root (str (System/getProperty "user.home") "/mem-debug")
-                    pattern (or (first *command-line-args*)
-                                "swapusage|memory_pressure|Filesystem|/dev|pageouts|compress|VM|GPU|panic|watchdog|jetsam|memorystatus")
-                    glob (or (second *command-line-args*) "*.txt")]
-                (shell "bash" "-c"
-                       (str "cd " root "/snaps && "
-                            "egrep -n '" pattern "' " glob " 2>/dev/null | "
-                            "egrep -v 'Ignoring GPU update because this process is not GPU managed' | "
-                            "head -200")))}
+  summarize     {:doc "Summarize newest snapshot (key terms)."
+                 :task tasks/summarize!}
 
-  ;; --- Grep shortcuts (menu:*) ---
+  grep          {:doc "Grep snapshots for a pattern. Usage: bb grep \"pattern\" [glob]"
+                 :task (tasks/grep-snaps! (first *command-line-args*)
+                                          (second *command-line-args*))}
 
-  menu:panic {:doc "Panic/watchdog/jetsam: live logs + historical"
-              :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                      (shell "bash" "-c"
-                             (str "echo '=== CURRENT (last 10m) ===' && "
-                                  "(log show --last 10m --predicate 'eventMessage CONTAINS \"panic\" OR eventMessage CONTAINS \"watchdog\" OR eventMessage CONTAINS \"jetsam\" OR eventMessage CONTAINS \"GPU Restart\" OR eventMessage CONTAINS \"hang\"' 2>/dev/null | "
-                                  "egrep -v 'AppleLOM.Watchdog|corespeech' | head -50 || echo '(no recent events)') && "
-                                  "echo && echo '=== HISTORICAL ===' && "
-                                  "cd " snaps " && "
-                                  "egrep -n 'panic|watchdog|jetsam|memorystatus|vm_pageout|GPU Restart|IOMFB|WindowServer|hang|stall|killed' reboot-*.txt 2>/dev/null | "
-                                  "egrep -v 'Ignoring GPU update|not memory-managed|AppleLOM.Watchdog|corespeech' | "
-                                  "head -150 || echo '(no matches)'")))}
+  menu:panic    {:doc "Panic/watchdog/jetsam: live logs + historical"
+                 :task tasks/menu:panic!}
 
-  menu:reboot {:doc "Reboot cause: live logs + historical"
-               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                       (shell "bash" "-c"
-                              (str "echo '=== CURRENT (shutdown cause) ===' && "
-                                   "(log show --last 30m --predicate 'eventMessage CONTAINS \"Previous shutdown cause\" OR eventMessage CONTAINS \"panic\" OR eventMessage CONTAINS \"BSD process name\"' 2>/dev/null | head -20 || echo '(no recent events)') && "
-                                   "echo && echo '=== HISTORICAL ===' && "
-                                   "cd " snaps " && "
-                                   "egrep -n 'panic|Userspace watchdog|watchdogd|Previous shutdown cause|BSD process name' reboot-*.txt 2>/dev/null | "
-                                   "egrep -v 'AppleLOM.Watchdog' | "
-                                   "head -150 || echo '(no matches)'")))}
+  menu:reboot   {:doc "Reboot cause: live logs + historical"
+                 :task tasks/menu:reboot!}
 
-  menu:jetsam {:doc "Kernel memory kills: live logs + historical"
-               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                       (shell "bash" "-c"
-                              (str "echo '=== CURRENT (last 10m) ===' && "
-                                   "(log show --last 10m --predicate 'eventMessage CONTAINS \"jetsam\" OR eventMessage CONTAINS \"memorystatus\" OR eventMessage CONTAINS \"killed\" OR eventMessage CONTAINS \"vm_pressure\"' 2>/dev/null | "
-                                   "egrep -v 'not memory-managed|is not RunningBoard jetsam' | head -50 || echo '(no recent events)') && "
-                                   "echo && echo '=== HISTORICAL ===' && "
-                                   "cd " snaps " && "
-                                   "egrep -n 'jetsam|memorystatus|killed process|kill cause|vm_pressure|low memory|purgeable|coalition' reboot-*.txt 2>/dev/null | "
-                                   "egrep -v 'not memory-managed|is not RunningBoard jetsam' | "
-                                   "head -150 || echo '(no matches)'")))}
+  menu:jetsam   {:doc "Kernel memory kills: live logs + historical"
+                 :task tasks/menu:jetsam!}
 
-  menu:brave {:doc "Brave browser: live processes + historical"
-              :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                      (shell "bash" "-c"
-                             (str "echo '=== CURRENT ===' && "
-                                  "ps aux | head -1 && "
-                                  "(ps aux | grep -i 'Brave' | grep -v grep || echo '(Brave not running)') && "
-                                  "echo && echo '=== HISTORICAL ===' && "
-                                  "cd " snaps " && "
-                                  "egrep -n 'Brave.*(GPU|videoencoder|jetsam|killed|suspend|resume|stalled|hang|coalition|memoryLimit|RunningBoard)' *.txt 2>/dev/null | "
-                                  "egrep -v 'not memory-managed' | "
-                                  "head -150 || echo '(no matches)'")))}
+  menu:brave    {:doc "Brave browser: live processes + historical"
+                 :task tasks/menu:brave!}
 
-  menu:vscode {:doc "VS Code / JVM / Node: live processes + historical"
-               :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                       (shell "bash" "-c"
-                              (str "echo '=== CURRENT ===' && "
-                                   "ps aux | head -1 && "
-                                   "(ps aux | egrep -i 'Code Helper|Electron|java|clojure|node' | grep -v grep | head -30 || echo '(none running)') && "
-                                   "echo && echo '=== HISTORICAL ===' && "
-                                   "cd " snaps " && "
-                                   "egrep -n 'Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed' heavy-*.txt 2>/dev/null | "
-                                   "head -150 || echo '(no matches)'")))}
+  menu:vscode   {:doc "VS Code / JVM / Node: live processes + historical"
+                 :task tasks/menu:vscode!}
 
   menu:clojure-lsp {:doc "clojure-lsp processes: live + historical"
-                   :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                           (shell "bash" "-c"
-                                  (str "echo '=== CURRENT ===' && "
-                                       "ps aux | head -1 && "
-                                       "(ps aux | egrep -i 'clojure-lsp|clj-kondo' | grep -v grep || echo '(none running)') && "
-                                       "echo && echo '=== HISTORICAL ===' && "
-                                       "cd " snaps " && "
-                                       "egrep -in 'clojure-lsp|clj-kondo' *.txt 2>/dev/null | "
-                                       "head -150 || echo '(no matches)'")))}
+                    :task tasks/menu:clojure-lsp!}
 
   menu:insiders {:doc "VS Code Insiders: live + historical snapshots"
-                 :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                         (shell "bash" "-c"
-                                (str "echo '=== CURRENT ===' && "
-                                     "ps aux | head -1 && "
-                                     "ps aux | egrep -i 'Code.*Insiders|extensionHost|shared-process|ptyHost' | grep -v grep && "
-                                     "echo && echo '=== HISTORICAL ===' && "
-                                     "cd " snaps " && "
-                                     "egrep -in 'Code - Insiders|Code Helper.*Insiders|extensionHost|shared-process|ptyHost' *.txt 2>/dev/null | "
-                                     "head -200 || echo '(no matches)'")))}
+                 :task tasks/menu:insiders!}
 
   menu:electron {:doc "Electron/Chromium helpers: live + historical"
-                 :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                         (shell "bash" "-c"
-                                (str "echo '=== CURRENT ===' && "
-                                     "ps aux | head -1 && "
-                                     "(ps aux | egrep -i 'Helper.*(Renderer|GPU|Plugin)|utility-network|crashpad' | grep -v 'Brave\\|Chrome' | grep -v grep | head -30 || echo '(none)') && "
-                                     "echo && echo '=== HISTORICAL ===' && "
-                                     "cd " snaps " && "
-                                     "egrep -n 'Helper.*Renderer|Helper.*GPU|Helper.*Plugin|utility-network|gpu-process|crashpad' *.txt 2>/dev/null | "
-                                     "egrep -v 'Brave|Chrome' | "
-                                     "head -150 || echo '(no matches)'")))}
+                 :task tasks/menu:electron!}
 
-  menu:metrics {:doc "Memory metrics: live + historical snapshots"
-                :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
-                        (shell "bash" "-c"
-                               (str "echo '=== CURRENT ===' && "
-                                    "sysctl vm.swapusage && "
-                                    "echo '---' && memory_pressure | head -5 && "
-                                    "echo '---' && vm_stat | egrep -i 'pageout|compress|wired' && "
-                                    "echo '---' && top -l 1 -n 0 -s 0 | grep PhysMem && "
-                                    "echo && echo '=== HISTORICAL ===' && "
-                                    "cd " snaps " && "
-                                    "egrep -n 'swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus' lite-*.txt 2>/dev/null | "
-                                    "head -200 || echo '(no matches)'")))}
+  menu:metrics  {:doc "Memory metrics: live + historical snapshots"
+                 :task tasks/menu:metrics!}
 
-  ;; --- Scheduled snapshots (launchd) ---
-
-  schedule:install {:doc "Install launchd jobs: lite every 6h, heavy daily at 3am"
-                    :task (let [root (str (System/getProperty "user.home") "/mem-debug")
-                                la (str (System/getProperty "user.home") "/Library/LaunchAgents")]
-                            (shell "bash" "-c"
-                                   (str "mkdir -p " la " && "
-                                        "cp " root "/launchd/com.pez.memsnap-lite.plist " la "/ && "
-                                        "cp " root "/launchd/com.pez.memsnap-heavy.plist " la "/ && "
-                                        "launchctl unload " la "/com.pez.memsnap-lite.plist 2>/dev/null || true && "
-                                        "launchctl unload " la "/com.pez.memsnap-heavy.plist 2>/dev/null || true && "
-                                        "launchctl load " la "/com.pez.memsnap-lite.plist && "
-                                        "launchctl load " la "/com.pez.memsnap-heavy.plist && "
-                                        "echo 'Installed and loaded:' && "
-                                        "launchctl list | grep memsnap")))}
+  schedule:install   {:doc "Install launchd jobs: lite every 6h, heavy daily at 3am"
+                      :task tasks/schedule:install!}
 
   schedule:uninstall {:doc "Uninstall launchd jobs"
-                      :task (let [la (str (System/getProperty "user.home") "/Library/LaunchAgents")]
-                              (shell "bash" "-c"
-                                     (str "launchctl unload " la "/com.pez.memsnap-lite.plist 2>/dev/null || true && "
-                                          "launchctl unload " la "/com.pez.memsnap-heavy.plist 2>/dev/null || true && "
-                                          "rm -f " la "/com.pez.memsnap-lite.plist " la "/com.pez.memsnap-heavy.plist && "
-                                          "echo 'Uninstalled memsnap launchd jobs'")))}
+                      :task tasks/schedule:uninstall!}
 
-  schedule:status {:doc "Show status of scheduled jobs"
-                   :task (shell "bash" "-c"
-                                "echo '=== Loaded jobs ===' && (launchctl list | grep memsnap || echo '(none loaded)') && echo && echo '=== Next lite run ===' && (launchctl print gui/$(id -u)/com.pez.memsnap-lite 2>/dev/null | grep -E 'state|interval|last exit' || echo '(not loaded)')")}}}
+  schedule:status    {:doc "Show status of scheduled jobs"
+                      :task tasks/schedule:status!}}}
