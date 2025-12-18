@@ -142,4 +142,32 @@
                                     "echo && echo '=== HISTORICAL ===' && "
                                     "cd " snaps " && "
                                     "egrep -n 'swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus' lite-*.txt 2>/dev/null | "
-                                    "head -200 || echo '(no matches)'")))}}}
+                                    "head -200 || echo '(no matches)'")))}
+
+  ;; --- Scheduled snapshots (launchd) ---
+
+  schedule:install {:doc "Install launchd jobs: lite every 6h, heavy daily at 3am"
+                    :task (let [root (str (System/getProperty "user.home") "/mem-debug")
+                                la (str (System/getProperty "user.home") "/Library/LaunchAgents")]
+                            (shell "bash" "-c"
+                                   (str "mkdir -p " la " && "
+                                        "cp " root "/launchd/com.pez.memsnap-lite.plist " la "/ && "
+                                        "cp " root "/launchd/com.pez.memsnap-heavy.plist " la "/ && "
+                                        "launchctl unload " la "/com.pez.memsnap-lite.plist 2>/dev/null || true && "
+                                        "launchctl unload " la "/com.pez.memsnap-heavy.plist 2>/dev/null || true && "
+                                        "launchctl load " la "/com.pez.memsnap-lite.plist && "
+                                        "launchctl load " la "/com.pez.memsnap-heavy.plist && "
+                                        "echo 'Installed and loaded:' && "
+                                        "launchctl list | grep memsnap")))}
+
+  schedule:uninstall {:doc "Uninstall launchd jobs"
+                      :task (let [la (str (System/getProperty "user.home") "/Library/LaunchAgents")]
+                              (shell "bash" "-c"
+                                     (str "launchctl unload " la "/com.pez.memsnap-lite.plist 2>/dev/null || true && "
+                                          "launchctl unload " la "/com.pez.memsnap-heavy.plist 2>/dev/null || true && "
+                                          "rm -f " la "/com.pez.memsnap-lite.plist " la "/com.pez.memsnap-heavy.plist && "
+                                          "echo 'Uninstalled memsnap launchd jobs'")))}
+
+  schedule:status {:doc "Show status of scheduled jobs"
+                   :task (shell "bash" "-c"
+                                "echo '=== Loaded jobs ===' && (launchctl list | grep memsnap || echo '(none loaded)') && echo && echo '=== Next lite run ===' && (launchctl print gui/$(id -u)/com.pez.memsnap-lite 2>/dev/null | grep -E 'state|interval|last exit' || echo '(not loaded)')")}}}
