@@ -1,6 +1,7 @@
 {:paths ["scripts"]
  :tasks
- {:requires ([tasks])
+ {:requires ([tasks]
+             [menu-tasks])
 
   snap          {:doc "Baseline / dialog / feels off. Compact snapshot."
                  :task tasks/snap!}
@@ -22,37 +23,38 @@
                                           (second *command-line-args*))}
 
   menu:panic    {:doc "Panic/watchdog/jetsam: live logs + historical"
-                 :task tasks/menu:panic!}
+                 :task menu-tasks/panic!}
 
   menu:reboot   {:doc "Reboot cause: live logs + historical"
-                 :task tasks/menu:reboot!}
+                 :task menu-tasks/reboot!}
 
   menu:jetsam   {:doc "Kernel memory kills: live logs + historical"
-                 :task tasks/menu:jetsam!}
+                 :task menu-tasks/jetsam!}
 
   menu:brave    {:doc "Brave browser: live processes + historical"
-                 :task tasks/menu:brave!}
+                 :task menu-tasks/brave!}
 
   menu:vscode   {:doc "VS Code / JVM / Node: live processes + historical"
-                 :task tasks/menu:vscode!}
+                 :task menu-tasks/vscode!}
 
   menu:clojure-lsp {:doc "clojure-lsp processes: live + historical"
-                    :task tasks/menu:clojure-lsp!}
+                    :task menu-tasks/clojure-lsp!}
 
   menu:insiders {:doc "VS Code Insiders: live + historical snapshots"
-                 :task tasks/menu:insiders!}
+                 :task menu-tasks/insiders!}
 
   menu:electron {:doc "Electron/Chromium helpers: live + historical"
-                 :task tasks/menu:electron!}
+                 :task menu-tasks/electron!}
 
   menu:metrics  {:doc "Memory metrics: live + historical snapshots"
-                 :task tasks/menu:metrics!}
+                 :task menu-tasks/metrics!}
 
   schedule:install   {:doc "Install launchd jobs: lite every 6h, heavy daily at 3am"
-                      :task tasks/schedule:install!}
+                      :task tasks/schedule-install!}
 
   schedule:uninstall {:doc "Uninstall launchd jobs"
-                      :task tasks/schedule:uninstall!}
+                      :task tasks/schedule-uninstall!}
 
   schedule:status    {:doc "Show status of scheduled jobs"
-                      :task tasks/schedule:status!}}}
+                      :task tasks/schedule-status!}}}
+
