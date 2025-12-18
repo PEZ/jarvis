@@ -78,6 +78,21 @@
                                    "egrep -n 'Code Helper|Electron|java|clojure|node|JIT|GC|OutOfMemory|SIGKILL|killed' heavy-*.txt 2>/dev/null | "
                                    "head -200 || echo '(no matches)'")))}
 
+  menu:insiders {:doc "VS Code Insiders processes across all snapshots"
+                 :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                         (shell "bash" "-c"
+                                (str "cd " snaps " && "
+                                     "egrep -in 'Code - Insiders|Code Helper.*Insiders|extensionHost|shared-process|ptyHost' *.txt 2>/dev/null | "
+                                     "head -300 || echo '(no matches)'")))}
+
+  menu:electron {:doc "Electron/Chromium helper buildup (renderer, GPU, utility)"
+                 :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
+                         (shell "bash" "-c"
+                                (str "cd " snaps " && "
+                                     "egrep -n 'Helper.*Renderer|Helper.*GPU|Helper.*Plugin|utility-network|gpu-process|crashpad' *.txt 2>/dev/null | "
+                                     "egrep -v 'Brave|Chrome' | "
+                                     "head -200 || echo '(no matches)'")))}
+
   menu:metrics {:doc "Memory metrics summary (swap/pressure/pageouts)"
                 :task (let [snaps (str (System/getProperty "user.home") "/mem-debug/snaps")]
                         (shell "bash" "-c"
