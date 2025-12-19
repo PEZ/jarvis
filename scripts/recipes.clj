@@ -46,3 +46,49 @@
                 "cd " config/snaps " && "
                 "egrep -n 'swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus' lite-*.txt 2>/dev/null | "
                 "head -200 || echo '(no matches)'")))
+
+(defn ^:export process-census!
+  "Quick census of suspected memory-hoarding processes."
+  []
+  (p/shell "bash" "-c"
+           (str "echo '=== Process Census ===' && "
+                "echo \"Timestamp: $(date +%Y%m%d-%H%M%S)\" && "
+                "echo && "
+                "echo '--- Disk Space ---' && "
+                "df -h / | tail -1 | awk '{print \"Available: \" $4 \" (\" $5 \" used)\"}' && "
+                "echo && "
+                "echo '--- clojure-lsp (count + memory) ---' && "
+                "echo \"Count: $(pgrep -f clojure-lsp | wc -l | tr -d ' ')\" && "
+                "ps aux | grep clojure-lsp | grep -v grep | awk '{sum+=$6; print int($6/1024) \" MB  PID \" $2}' | sort -rn && "
+                "echo && "
+                "echo '--- Java/JVM (count + memory) ---' && "
+                "echo \"Count: $(pgrep -f java | wc -l | tr -d ' ')\" && "
+                "ps aux | grep java | grep -v grep | awk '{sum+=$6; print int($6/1024) \" MB  PID \" $2}' | sort -rn | head -10 && "
+                "echo && "
+                "echo '--- VS Code Helpers (count) ---' && "
+                "echo \"Renderer: $(pgrep -f 'Code.*Helper.*Renderer' | wc -l | tr -d ' ')\" && "
+                "echo \"GPU: $(pgrep -f 'Code.*Helper.*GPU' | wc -l | tr -d ' ')\" && "
+                "echo \"Plugin: $(pgrep -f 'Code.*Helper.*Plugin' | wc -l | tr -d ' ')\" && "
+                "echo \"ExtensionHost: $(pgrep -f extensionHost | wc -l | tr -d ' ')\" && "
+                "echo && "
+                "echo '--- Memory Pressure ---' && "
+                "memory_pressure | head -3")))
+
+(defn ^:export jvm-breakdown!
+  "Detailed JVM process analysis: memory totals, categorization, start times."
+  []
+  (p/shell "bash" "-c"
+           (str "echo '=== JVM Process Breakdown ===' && "
+                "echo \"Timestamp: $(date +%Y%m%d-%H%M%S)\" && "
+                "echo && "
+                "echo '--- Summary ---' && "
+                "echo \"Total JVMs: $(pgrep -f java | wc -l | tr -d ' ')\" && "
+                "ps aux | grep java | grep -v grep | awk '{sum+=$6} END {printf \"Total Memory: %d MB (%.1f GB)\\n\", sum/1024, sum/1024/1024}' && "
+                "echo && "
+                "echo '--- By Category ---' && "
+                "echo \"Test-related (test-data|integration-test): $(ps aux | grep java | grep -E 'test-data|integration-test' | grep -v grep | wc -l | tr -d ' ')\" && "
+                "echo \"nREPL processes: $(ps aux | grep 'nrepl.cmdline' | grep -v grep | wc -l | tr -d ' ')\" && "
+                "echo \"Shadow-cljs: $(ps aux | grep java | grep shadow-cljs | grep -v grep | wc -l | tr -d ' ')\" && "
+                "echo && "
+                "echo '--- All JVMs (by memory) ---' && "
+                "ps aux | grep java | grep -v grep | awk '{print int($6/1024) \" MB  PID \" $2 \"  started \" $9}' | sort -rn | head -15")))

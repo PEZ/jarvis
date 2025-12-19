@@ -8,13 +8,17 @@ Background: The Jarvis toolkit has started to help investigate a specific situat
 
 **Primary symptom**: macOS OOM dialogs on a machine that shouldn't run out of memory.
 
-**Current Suspects** (ranked by evidence):
-1. VS Code Insiders — multiple windows, process leaks on restart
-2. clojure-lsp — ~500-900MB per instance, one per Calva window
-3. Brave browser — GPU helpers, renderer sprawl
-4. Electron orphans — helpers that outlive their windows
+**Confirmed Culprit** (Dec 2025 investigation):
+- **Calva integration tests** — spawns JVMs that linger ~5-10 minutes before cleanup
+- **Rapid test iterations** accumulate JVMs faster than cleanup, causing memory pressure
+- **Low disk space** (~80GB free) prevented swap as escape valve, triggering OOM
 
-**Goal**: Correlate memory events with snapshots to find the culprit(s).
+**Contributing factors** (still worth monitoring):
+- clojure-lsp — ~300-600MB per instance, one per Calva window
+- VS Code Insiders — multiple windows, Electron helper accumulation
+- Disk space below 100GB on 64GB Mac = no room for swap when needed
+
+**Goal**: Monitor for process accumulation, maintain disk headroom, catch regressions.
 
 ## How to Be Jarvis
 
@@ -55,6 +59,10 @@ Propose improvements naturally during investigations. The toolkit should evolve 
 ## Process Investigation Patterns
 
 ```bash
+# Quick health check
+bb recipe:census   # Process counts: clojure-lsp, JVM, VS Code helpers
+bb recipe:jvms     # JVM deep dive: memory totals, test vs manual categorization
+
 # Brave (browser + helpers)
 bb inspect-process brave --events "GPU|jetsam|killed" --exclude "not memory-managed"
 
@@ -70,6 +78,21 @@ bb inspect-process electron --patterns "Helper.*(Renderer|GPU)" --exclude "Brave
 # JVM processes
 bb inspect-process java --events "GC|OutOfMemory|killed" --snapshots heavy
 ```
+
+## Test Run Monitoring Protocol
+
+When investigating test-related memory issues:
+
+1. **Baseline**: `bb recipe:census` before tests
+2. **Run tests**: Note timing and iteration count
+3. **Immediate capture**: `bb recipe:jvms` right after tests complete
+4. **Wait 5-10 min**: Capture again to see if orphans clean up
+5. **Compare**: JVM count should return to baseline
+
+**Red flags**:
+- JVM count grows with each test iteration
+- Test-related JVMs (classpath contains `test-data` or `integration-test`) persist
+- Total JVM memory exceeds 5GB during test runs
 
 ## Architecture (for code changes)
 
