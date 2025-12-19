@@ -53,6 +53,7 @@ Victories in the battle against "Your system has run out of application memory" 
 1. **Delayed cleanup ≠ leak** — processes that clean up eventually can still cause OOM if creation outpaces cleanup
 2. **Disk space matters** — on high-RAM Macs, swap is the pressure release valve; no disk = no valve
 3. **Test infrastructure** — integration tests that spawn external processes need aggressive cleanup
+4. **Pre-existing condition** — verified same orphan behavior in released Calva; not a regression from feature branch. More tests = more churn = faster accumulation.
 
 ---
 
