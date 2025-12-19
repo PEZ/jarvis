@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="${HOME}/mem-debug"
+ROOT="${HOME}/jarvis"
 SNAPS="${ROOT}/snaps"
 mkdir -p "$SNAPS"
 TS="$(date +"%Y%m%d-%H%M%S")"

@@ -8,7 +8,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>$HOME/mem-debug/bin/memsnap-heavy</string>
+        <string>$HOME/jarvis/bin/memsnap-heavy</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>

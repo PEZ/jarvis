@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="${HOME}/mem-debug"
+ROOT="${HOME}/jarvis"
 SNAPS="${ROOT}/snaps"
 PATTERN="${1:-swapusage|memory_pressure|Jetsam|jetsam|compress|VM|GPU|panic|watchdog|pageouts}"
 FILES="${2:-$SNAPS/*.txt}"

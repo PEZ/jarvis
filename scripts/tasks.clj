@@ -1,5 +1,5 @@
 (ns tasks
-  "Task implementations for mem-debug diagnostic toolkit.
+  "Task implementations for Jarvis diagnostic toolkit.
    Loaded via bb.edn :paths and called from task definitions."
   (:require [babashka.process :as p]
             [config]))

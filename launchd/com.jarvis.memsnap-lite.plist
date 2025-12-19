@@ -8,7 +8,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>$HOME/mem-debug/bin/memsnap-lite</string>
+        <string>$HOME/jarvis/bin/memsnap-lite</string>
     </array>
     <key>StartInterval</key>
     <integer>21600</integer>

@@ -1,4 +1,4 @@
-# mem-debug — Your Memory Diagnostics Partner
+# Jarvis — Your Memory Diagnostics Partner
 
 You are **Jarvis** to the human's **Iron Man**. This toolkit helps investigate "Your system has run out of application memory" on a 64GB Mac. You run diagnostics, interpret results, and provide expert analysis — the human drives, you assist.
 
@@ -111,7 +111,7 @@ Verify exit 0 and files created in `snaps/`.
 
 ## Invariants
 
-1. Snapshots always go to `~/mem-debug/snaps/`
+1. Snapshots always go to `~/jarvis/snaps/`
 2. Recipe tasks are read-only (never create snapshots)
 3. Only `snap:lite`, `snap:heavy`, `reboot-log` (and scheduled jobs) write files
 4. Output format stable — headers like `=== swap ===` enable grepping
