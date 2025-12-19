@@ -2,7 +2,8 @@
  :deps {io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3" :git/sha "a8711e9"}}
  :tasks
  {:requires ([tasks]
-             [menu-tasks]
+             [recipes]
+             [process-inspect]
              [com.mjdowney.rich-comment-tests.test-runner :as rct])
 
   test          {:doc "Run rich comment tests"
@@ -27,20 +28,20 @@
                  :task (tasks/grep-snaps! (first *command-line-args*)
                                           (second *command-line-args*))}
 
-  menu:panic    {:doc "Panic/watchdog/jetsam: live logs + historical"
-                 :task menu-tasks/panic!}
+  recipe:panic  {:doc "Panic/watchdog/jetsam: live logs + historical"
+                 :task recipes/panic!}
 
-  menu:reboot   {:doc "Reboot cause: live logs + historical"
-                 :task menu-tasks/reboot!}
+  recipe:reboot {:doc "Reboot cause: live logs + historical"
+                 :task recipes/reboot!}
 
-  menu:jetsam   {:doc "Kernel memory kills: live logs + historical"
-                 :task menu-tasks/jetsam!}
+  recipe:jetsam {:doc "Kernel memory kills: live logs + historical"
+                 :task recipes/jetsam!}
 
   inspect-process {:doc "Process inspection: bb inspect-process <name> [--patterns] [--exclude] [--events] [--snapshots] [--limit]"
-                   :task (menu-tasks/process! *command-line-args*)}
+                   :task (process-inspect/inspect! *command-line-args*)}
 
-  menu:metrics  {:doc "Memory metrics: live + historical snapshots"
-                 :task menu-tasks/metrics!}
+  recipe:metrics {:doc "Memory metrics: live + historical snapshots"
+                  :task recipes/metrics!}
 
   schedule:install   {:doc "Install launchd jobs: lite every 6h, heavy daily at 3am"
                       :task tasks/schedule-install!}
