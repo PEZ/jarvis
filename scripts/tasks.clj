@@ -44,22 +44,22 @@
 (defn ^:export schedule-install! []
   (p/shell "bash" "-c"
            (str "mkdir -p " config/launch-agents " && "
-                "cp " config/root "/launchd/com.pez.memsnap-lite.plist " config/launch-agents "/ && "
-                "cp " config/root "/launchd/com.pez.memsnap-heavy.plist " config/launch-agents "/ && "
-                "launchctl unload " config/launch-agents "/com.pez.memsnap-lite.plist 2>/dev/null || true && "
-                "launchctl unload " config/launch-agents "/com.pez.memsnap-heavy.plist 2>/dev/null || true && "
-                "launchctl load " config/launch-agents "/com.pez.memsnap-lite.plist && "
-                "launchctl load " config/launch-agents "/com.pez.memsnap-heavy.plist && "
+                "cp " config/root "/launchd/com.jarvis.memsnap-lite.plist " config/launch-agents "/ && "
+                "cp " config/root "/launchd/com.jarvis.memsnap-heavy.plist " config/launch-agents "/ && "
+                "launchctl unload " config/launch-agents "/com.jarvis.memsnap-lite.plist 2>/dev/null || true && "
+                "launchctl unload " config/launch-agents "/com.jarvis.memsnap-heavy.plist 2>/dev/null || true && "
+                "launchctl load " config/launch-agents "/com.jarvis.memsnap-lite.plist && "
+                "launchctl load " config/launch-agents "/com.jarvis.memsnap-heavy.plist && "
                 "echo 'Installed and loaded:' && "
                 "launchctl list | grep memsnap")))
 
 (defn ^:export schedule-uninstall! []
   (p/shell "bash" "-c"
-           (str "launchctl unload " config/launch-agents "/com.pez.memsnap-lite.plist 2>/dev/null || true && "
-                "launchctl unload " config/launch-agents "/com.pez.memsnap-heavy.plist 2>/dev/null || true && "
-                "rm -f " config/launch-agents "/com.pez.memsnap-lite.plist " config/launch-agents "/com.pez.memsnap-heavy.plist && "
+           (str "launchctl unload " config/launch-agents "/com.jarvis.memsnap-lite.plist 2>/dev/null || true && "
+                "launchctl unload " config/launch-agents "/com.jarvis.memsnap-heavy.plist 2>/dev/null || true && "
+                "rm -f " config/launch-agents "/com.jarvis.memsnap-lite.plist " config/launch-agents "/com.jarvis.memsnap-heavy.plist && "
                 "echo 'Uninstalled memsnap launchd jobs'")))
 
 (defn ^:export schedule-status! []
   (p/shell "bash" "-c"
-           "echo '=== Loaded jobs ===' && (launchctl list | grep memsnap || echo '(none loaded)') && echo && echo '=== Next lite run ===' && (launchctl print gui/$(id -u)/com.pez.memsnap-lite 2>/dev/null | grep -E 'state|interval|last exit' || echo '(not loaded)')"))
+           "echo '=== Loaded jobs ===' && (launchctl list | grep memsnap || echo '(none loaded)') && echo && echo '=== Next lite run ===' && (launchctl print gui/$(id -u)/com.jarvis.memsnap-lite 2>/dev/null | grep -E 'state|interval|last exit' || echo '(not loaded)')"))

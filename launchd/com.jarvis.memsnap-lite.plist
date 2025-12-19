@@ -3,23 +3,20 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.pez.memsnap-heavy</string>
+    <string>com.jarvis.memsnap-lite</string>
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>$HOME/mem-debug/bin/memsnap-heavy</string>
+        <string>$HOME/mem-debug/bin/memsnap-lite</string>
     </array>
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>3</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <key>StartInterval</key>
+    <integer>21600</integer>
     <key>StandardOutPath</key>
-    <string>/tmp/memsnap-heavy.log</string>
+    <string>/tmp/memsnap-lite.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/memsnap-heavy.err</string>
+    <string>/tmp/memsnap-lite.err</string>
+    <key>RunAtLoad</key>
+    <true/>
 </dict>
 </plist>
