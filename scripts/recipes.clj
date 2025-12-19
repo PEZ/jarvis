@@ -48,16 +48,28 @@
                 "head -200 || echo '(no matches)'")))
 
 (defn- census-one-process
-  "Count and show memory for one process pattern."
+  "Count and show memory for one process pattern.
+   Uses pgrep without -f for simple names (avoids matching substrings in paths),
+   and pgrep -f for regex patterns that need full cmdline matching."
   [pattern]
-  (p/shell "bash" "-c"
-           (str "echo '--- " pattern " ---' && "
-                "count=$(pgrep -f '" pattern "' | wc -l | tr -d ' ') && "
-                "echo \"Count: $count\" && "
-                "if [ \"$count\" -gt 0 ]; then "
-                "ps aux | grep -E '" pattern "' | grep -v grep | "
-                "awk '{print int($6/1024) \" MB  PID \" $2}' | sort -rn | head -10; "
-                "fi")))
+  (let [;; Detect if pattern needs regex matching (contains metacharacters)
+        needs-regex? (re-find #"[.*|+?\[\](){}^$\\]" pattern)
+        ;; Use pgrep -f only for regex patterns
+        pgrep-cmd (if needs-regex?
+                    (str "pgrep -f '" pattern "'")
+                    (str "pgrep " pattern))
+        ;; For ps grep, use '/java ' for java to avoid javascript matches
+        ps-pattern (if (= pattern "java")
+                     "/java "
+                     pattern)]
+    (p/shell "bash" "-c"
+             (str "echo '--- " pattern " ---' && "
+                  "count=$(" pgrep-cmd " | wc -l | tr -d ' ') && "
+                  "echo \"Count: $count\" && "
+                  "if [ \"$count\" -gt 0 ]; then "
+                  "ps aux | grep -E '" ps-pattern "' | grep -v grep | "
+                  "awk '{print int($6/1024) \" MB  PID \" $2}' | sort -rn | head -10; "
+                  "fi"))))
 
 (defn ^:export process-census!
   "Quick census of processes. Pass process names/patterns as args, or uses defaults:
@@ -87,13 +99,13 @@
                   "echo \"Timestamp: $(date +%Y%m%d-%H%M%S)\" && "
                   "echo && "
                   "echo '--- Summary ---' && "
-                  "echo \"Total JVMs: $(pgrep -f java | wc -l | tr -d ' ')\" && "
-                  "ps aux | grep java | grep -v grep | awk '{sum+=$6} END {printf \"Total Memory: %d MB (%.1f GB)\\n\", sum/1024, sum/1024/1024}' && "
+                  "echo \"Total JVMs: $(pgrep java | wc -l | tr -d ' ')\" && "
+                  "ps aux | grep '/java ' | grep -v grep | awk '{sum+=$6} END {printf \"Total Memory: %d MB (%.1f GB)\\n\", sum/1024, sum/1024/1024}' && "
                   "echo && "
                   "echo '--- By Category ---' && "
-                  "echo \"Test-related (" test-related "): $(ps aux | grep java | grep -E '" test-related "' | grep -v grep | wc -l | tr -d ' ')\" && "
-                  "echo \"nREPL processes: $(ps aux | grep '" nrepl "' | grep -v grep | wc -l | tr -d ' ')\" && "
-                  "echo \"Shadow-cljs: $(ps aux | grep java | grep " shadow-cljs " | grep -v grep | wc -l | tr -d ' ')\" && "
+                  "echo \"Test-related (" test-related "): $(ps aux | grep '/java ' | grep -E '" test-related "' | grep -v grep | wc -l | tr -d ' ')\" && "
+                  "echo \"nREPL processes: $(ps aux | grep '/java ' | grep '" nrepl "' | grep -v grep | wc -l | tr -d ' ')\" && "
+                  "echo \"Shadow-cljs: $(ps aux | grep '/java ' | grep " shadow-cljs " | grep -v grep | wc -l | tr -d ' ')\" && "
                   "echo && "
                   "echo '--- All JVMs (by memory) ---' && "
-                  "ps aux | grep java | grep -v grep | awk '{print int($6/1024) \" MB  PID \" $2 \"  started \" $9}' | sort -rn | head -15"))))
+                  "ps aux | grep '/java ' | grep -v grep | awk '{print int($6/1024) \" MB  PID \" $2 \"  started \" $9}' | sort -rn | head -15"))))
