@@ -28,19 +28,11 @@
 
 ;; --- Noise filters ---
 
-(def ^:private noise-patterns
-  ["Ignoring GPU update because this process is not GPU managed"
-   "Ignoring jetsam"
-   "Ignoring memory limit"
-   "not memory-managed"
-   "WatchDogTimer"
-   "corespeech"])
-
 (defn- filter-noise [text]
   (let [lines (string/split-lines text)]
     (->> lines
          (remove (fn [line]
-                   (some #(string/includes? line %) noise-patterns)))
+                   (some #(string/includes? line %) config/noise-patterns)))
          (string/join "\n"))))
 
 ;; --- Core snapshots ---
@@ -154,7 +146,7 @@
                           (map-indexed (fn [i line] [(inc i) line]))
                           (filter (fn [[_ line]]
                                     (and (re-find re line)
-                                         (not (some #(string/includes? line %) noise-patterns)))))
+                                         (not (some #(string/includes? line %) config/noise-patterns)))))
                           (take 200))]
          (when (seq matches)
            (println "====" (str f) "====")

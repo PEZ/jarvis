@@ -31,6 +31,11 @@ The current focus reflects the original author's context — VS Code extension d
 
 **If you're picking up this toolkit**: Start by telling Jarvis about *your* environment. The agent will help adapt the investigation patterns, process baselines, and suspects list to match your workload. The toolkit is designed to evolve with each user's specific situation.
 
+**Customizing for your environment**: Edit `scripts/config.clj` to adapt Jarvis to your situation:
+- `default-census-processes` — Which processes to monitor by default
+- `noise-patterns` — Log noise to filter out
+- `jvm-categories` — Patterns for categorizing JVM processes
+
 **Current suspects** (for the original author's context):
 1. **VS Code Insiders** — multiple windows, process leaks on restart
 2. **clojure-lsp** — ~500-900MB per instance, one per Calva window

@@ -120,12 +120,18 @@ scripts/
   tasks.clj         → Core tasks: snap:lite, snap:heavy, grep, schedule
   recipes.clj       → Canned diagnostics: metrics, panic, reboot, jetsam
   process_inspect.clj → Parameterized process investigation
-  config.clj        → Shared paths
-bin/memsnap-*       → Bash scripts (actual capture logic)
+  config.clj        → Shared paths + user-situational defaults
 snaps/              → Timestamped output (lite-*.txt, heavy-*.txt, reboot-*.txt)
 ```
 
-**Data flow**: `bb <task>` → `bin/memsnap-*` → writes to `snaps/` → analyzed via recipes/grep
+**User-situational config** (`scripts/config.clj`):
+- `default-census-processes` — Which processes to monitor by default
+- `noise-patterns` — Log noise to filter out
+- `jvm-categories` — Patterns for categorizing JVM processes (test-related, nrepl, shadow-cljs)
+
+When adapting Jarvis for a new user's environment, edit these config values rather than hardcoding in recipes/tasks.
+
+**Data flow**: `bb <task>` → writes to `snaps/` → analyzed via recipes/grep
 
 ## Code Patterns
 
@@ -138,7 +144,7 @@ snaps/              → Timestamped output (lite-*.txt, heavy-*.txt, reboot-*.tx
 - Section headers `=== keyword ===` enable grep analysis
 - Keep `log show` windows short (10m-30m)
 
-**Noise filters** (exclude from output):
+**Noise filters** (configured in `config.clj`, exclude from output):
 - `AppleLOM.Watchdog` — hardware, not memory
 - `not memory-managed`, `is not RunningBoard jetsam`
 - `Ignoring GPU update because this process is not GPU managed`
