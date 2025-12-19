@@ -4,7 +4,8 @@
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
             [clojure.string :as string]
-            [config]))
+            [config]
+            [selmer.parser :as sp]))
 
 ;; --- Capture helpers ---
 
@@ -163,24 +164,50 @@
 
 ;; --- Schedule management ---
 
-(defn ^:export schedule-install! []
-  (p/shell "bash" "-c"
-           (str "mkdir -p " config/launch-agents " && "
-                "cp " config/root "/launchd/com.jarvis.memsnap-lite.plist " config/launch-agents "/ && "
-                "cp " config/root "/launchd/com.jarvis.memsnap-heavy.plist " config/launch-agents "/ && "
-                "launchctl unload " config/launch-agents "/com.jarvis.memsnap-lite.plist 2>/dev/null || true && "
-                "launchctl unload " config/launch-agents "/com.jarvis.memsnap-heavy.plist 2>/dev/null || true && "
-                "launchctl load " config/launch-agents "/com.jarvis.memsnap-lite.plist && "
-                "launchctl load " config/launch-agents "/com.jarvis.memsnap-heavy.plist && "
-                "echo 'Installed and loaded:' && "
-                "launchctl list | grep memsnap")))
+(defn- find-bb-path
+  "Find the path to the bb executable."
+  []
+  (-> (p/process {:out :string} "which" "bb")
+      deref
+      :out
+      string/trim))
 
-(defn ^:export schedule-uninstall! []
-  (p/shell "bash" "-c"
-           (str "launchctl unload " config/launch-agents "/com.jarvis.memsnap-lite.plist 2>/dev/null || true && "
-                "launchctl unload " config/launch-agents "/com.jarvis.memsnap-heavy.plist 2>/dev/null || true && "
-                "rm -f " config/launch-agents "/com.jarvis.memsnap-lite.plist " config/launch-agents "/com.jarvis.memsnap-heavy.plist && "
-                "echo 'Uninstalled memsnap launchd jobs'")))
+(defn- render-plist
+  "Render a plist template with jarvis-root and bb-path."
+  [template-name]
+  (let [template-path (str config/root "/launchd/" template-name ".template")
+        context {:jarvis-root config/root
+                 :bb-path (find-bb-path)}]
+    (sp/render (slurp template-path) context)))
+
+(defn ^:export schedule-install!
+  "Generate plists from templates and install launchd jobs."
+  []
+  (fs/create-dirs config/launch-agents)
+  (let [lite-plist (str config/launch-agents "/com.jarvis.memsnap-lite.plist")
+        heavy-plist (str config/launch-agents "/com.jarvis.memsnap-heavy.plist")]
+    ;; Unload existing jobs
+    (p/shell {:continue true} "launchctl" "unload" lite-plist)
+    (p/shell {:continue true} "launchctl" "unload" heavy-plist)
+    ;; Generate plists from templates
+    (spit lite-plist (render-plist "memsnap-lite.plist"))
+    (spit heavy-plist (render-plist "memsnap-heavy.plist"))
+    ;; Load new jobs
+    (p/shell "launchctl" "load" lite-plist)
+    (p/shell "launchctl" "load" heavy-plist)
+    (println "Installed and loaded:")
+    (p/shell "bash" "-c" "launchctl list | grep memsnap")))
+
+(defn ^:export schedule-uninstall!
+  "Unload and remove launchd jobs."
+  []
+  (let [lite-plist (str config/launch-agents "/com.jarvis.memsnap-lite.plist")
+        heavy-plist (str config/launch-agents "/com.jarvis.memsnap-heavy.plist")]
+    (p/shell {:continue true} "launchctl" "unload" lite-plist)
+    (p/shell {:continue true} "launchctl" "unload" heavy-plist)
+    (fs/delete-if-exists lite-plist)
+    (fs/delete-if-exists heavy-plist)
+    (println "Uninstalled memsnap launchd jobs")))
 
 (defn ^:export schedule-status! []
   (p/shell "bash" "-c"

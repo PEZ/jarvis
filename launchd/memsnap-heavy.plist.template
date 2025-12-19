@@ -6,11 +6,11 @@
     <string>com.jarvis.memsnap-heavy</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/homebrew/bin/bb</string>
-        <string>--config</string>
-        <string>$HOME/jarvis/bb.edn</string>
+        <string>{{bb-path}}</string>
         <string>snap:heavy</string>
     </array>
+    <key>WorkingDirectory</key>
+    <string>{{jarvis-root}}</string>
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
