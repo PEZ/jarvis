@@ -6,9 +6,10 @@
     <string>com.jarvis.memsnap-lite</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>-c</string>
-        <string>$HOME/jarvis/bin/memsnap-lite</string>
+        <string>/opt/homebrew/bin/bb</string>
+        <string>--config</string>
+        <string>$HOME/jarvis/bb.edn</string>
+        <string>snap:lite</string>
     </array>
     <key>StartInterval</key>
     <integer>21600</integer>

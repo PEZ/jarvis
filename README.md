@@ -1,29 +1,86 @@
-# Jarvis
+# Jarvis — Your Memory Diagnostics Partner
 
-Babashka toolkit for diagnosing macOS memory pressure on a 64GB Mac.
+An AI-agent-centric toolkit for diagnosing macOS memory pressure. You talk to Jarvis, Jarvis runs diagnostics, interprets results, and provides expert analysis.
 
-## Goal
+## Prerequisites
 
-Capture "what the kernel thought was happening" when macOS shows "Your system has run out of application memory", when apps get paused/unresponsive, or when the machine freezes/reboots.
+- **[Babashka](https://babashka.org/)** — The `bb` command runs all Jarvis tasks
+  ```sh
+  brew install borkdude/brew/babashka
+  ```
+- **VS Code** (or Cursor) — With an AI agent that has terminal access
+- **GitHub Copilot** (or similar) — The AI that becomes Jarvis
+
+The toolkit is currently macOS-centric (memory_pressure, vm_stat, log show). If you're on Linux, tell Jarvis — it can adapt the diagnostic scripts to use `/proc/meminfo`, `dmesg`, and other Linux equivalents.
+
+## Working with Jarvis
+
+**Just say hi.** Open a chat with your AI agent in the Jarvis workspace and greet it. Jarvis will check your system health, interpret what it finds, and offer investigation options.
+
+**Describe your situation.** Tell Jarvis what you're experiencing — OOM dialogs, sluggishness, unexpected reboots. Jarvis will choose the right diagnostics and explain what it finds.
+
+**Ask questions.** "What's eating my memory?" "Is clojure-lsp leaking?" "What happened before the last reboot?" Jarvis has tools for all of these.
+
+**Let Jarvis evolve the toolkit.** When Jarvis notices patterns or gaps, it will propose new recipes or improvements. The toolkit adapts to your specific needs.
+
+## Background
+
+This toolkit was born from a specific frustration: macOS "Your system has run out of application memory" dialogs on a 64GB Mac that shouldn't run out of memory.
+
+The current focus reflects the original author's context — VS Code extension development with heavy Clojure/JVM usage. That's why you'll see process patterns for VS Code, clojure-lsp, Electron helpers, and JVM processes baked in.
+
+**If you're picking up this toolkit**: Start by telling Jarvis about *your* environment. The agent will help adapt the investigation patterns, process baselines, and suspects list to match your workload. The toolkit is designed to evolve with each user's specific situation.
+
+**Current suspects** (for the original author's context):
+1. **VS Code Insiders** — multiple windows, process leaks on restart
+2. **clojure-lsp** — ~500-900MB per instance, one per Calva window
+3. **Brave browser** — GPU helpers, renderer sprawl
+4. **Electron orphans** — helpers that outlive their windows
+
+## Philosophy
 
 This is deliberately NOT a "tweak settings until it stops" kit.
 It's a "collect comparable evidence fast, with minimal cognitive load" kit.
 
-## Quick Start
+The goal: **Correlate memory events with snapshots to find the culprit(s).**
 
-```bash
-bb tasks              # See all available commands
-bb recipe:metrics     # Check current memory health
-bb snap:lite          # Capture lightweight snapshot
-bb snap:heavy         # Capture comprehensive snapshot (during OOM)
-```
+## What to Tell Jarvis
+
+**After a reboot**: "I just rebooted, capture a baseline."
+
+**System feels off**: "Things feel sluggish, check memory health."
+
+**OOM dialog appeared**: "I'm seeing the out of memory dialog — capture everything before I dismiss it."
+
+**After unexpected reboot**: "My Mac rebooted unexpectedly, what happened?"
+
+**Investigating a suspect**: "Is Brave hogging memory?" or "How many clojure-lsp instances are running?"
+
+**Setting up monitoring**: "Enable automatic snapshots so we have history."
 
 ## Design
 
 - Snapshots are written to `~/jarvis/snaps/` as timestamped text files
-- Scripts live in `~/jarvis/bin/` and are invoked via bb tasks
+- Task implementations live in `scripts/*.clj`
 - The default snapshot is small (lite). Heavy snapshots are for escalation
 - Log capture is bounded because `log show` can be slow and huge
+
+## Interpreting Results
+
+**Healthy signs**:
+- Zero swap usage
+- `memorystatus_level` > 50
+- Moderate pageouts (growth rate matters, not absolute)
+
+**Warning signs**:
+- Swap > 10GB on 64GB Mac → something hoarding/leaking
+- `memorystatus_level` < 20 → critical pressure
+- Rapid pageout growth between snapshots → active pressure
+
+**Process baselines**:
+- clojure-lsp: 400-900MB each (count should match VS Code windows)
+- Code Helper (Renderer): 100-500MB each (watch for accumulation)
+- Brave main: ~800MB, renderers: 100-500MB each
 
 ## Why These Signals
 
@@ -32,72 +89,26 @@ bb snap:heavy         # Capture comprehensive snapshot (during OOM)
 - `top`/`ps` tell which processes were large at that moment (correlation, not proof)
 - `log show` is the best shot at seeing "who killed whom" (jetsam/memorystatus), watchdog/panic, GPU resets, etc.
 
-## Recipes
+## What Jarvis Can Do
 
-**Baseline (after reboot):**
-```bash
-bb snap:lite
+**Health checks**: Jarvis monitors swap usage, memory pressure, compressor activity, and pageout rates — and explains what they mean.
+
+**Snapshots**: Jarvis captures system state for later analysis. Lightweight snapshots for quick checks, heavy snapshots during incidents.
+
+**Process investigation**: Jarvis can dig into specific processes — memory usage, instance counts, kernel events, crash history.
+
+**Historical analysis**: Jarvis searches across all captured snapshots to find patterns and correlate events.
+
+**Post-mortem**: After crashes or reboots, Jarvis examines system logs for panic events, jetsam kills, and watchdog timeouts.
+
+## Tasks
+
+Jarvis' toolkit is built around [Babashka Tasks](https://book.babashka.org/#tasks). You can use them yourself too, of course 😀. List available tasks with:
+
+```sh
+bb tasks
 ```
 
-**Dialog appears / system feels off:**
-```bash
-bb snap:lite
-```
+## Automatic Monitoring
 
-**Severe incident (system very slow, OOM dialog):**
-```bash
-bb snap:heavy
-```
-
-**After unexpected reboot:**
-```bash
-bb reboot-log
-bb recipe:panic   # Check for panic/watchdog events
-```
-
-## Analysis
-
-```bash
-bb summarize                                    # Key metrics from newest snapshot
-bb grep "panic|watchdog|jetsam"                 # Search all snapshots
-bb inspect-process clojure-lsp                  # Investigate specific process
-bb recipe:metrics                               # Live + historical memory stats
-```
-
-## Layout
-
-```
-~/jarvis/
-  bb.edn                    # Task definitions
-  bin/
-    memsnap-lite            # Lightweight capture
-    memsnap-heavy           # Comprehensive capture
-    memsnap-reboot-log      # Post-reboot logs
-    memsnap-grep            # Search helper
-    memsnap-latest          # Find newest snapshot
-  scripts/
-    tasks.clj               # Core task implementations
-    recipes.clj             # Canned diagnostic recipes
-    process_inspect.clj     # Process investigation
-    config.clj              # Shared paths
-  snaps/
-    lite-*.txt              # Lightweight snapshots
-    heavy-*.txt             # Comprehensive snapshots
-    reboot-*.txt            # Post-reboot logs
-  launchd/
-    com.jarvis.memsnap-*.plist  # Scheduled job definitions
-```
-
-## Scheduling
-
-```bash
-bb schedule:install    # Enable auto-snapshots (lite every 6h, heavy daily 3am)
-bb schedule:status     # Check if jobs are active
-bb schedule:uninstall  # Disable auto-snapshots
-```
-
-## Gotchas
-
-- Scripts use strict bash settings (`set -euo pipefail`). Pipelines that can SIGPIPE are wrapped with `|| true`
-- `log show` can take time and produce large files; reboot-log uses a short window by default
-- Babashka doesn't expand `~` in shell commands — use absolute paths
+Ask Jarvis to enable scheduled snapshots. This gives you historical data to analyze when incidents occur — invaluable for catching slow leaks or correlating events across days.
