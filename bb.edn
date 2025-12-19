@@ -23,8 +23,8 @@
                  :task recipes/reboot!}
   recipe:jetsam {:doc "ANALYZE: Kernel memory kills. Use when apps are force-quit by system."
                  :task recipes/jetsam!}
-  recipe:census {:doc "ANALYZE: Quick census of clojure-lsp, JVM, VS Code helper counts + memory."
-                 :task recipes/process-census!}
+  recipe:census {:doc "ANALYZE: Process census. Usage: bb recipe:census [process patterns...] (defaults: clojure-lsp java Brave Code.*Insiders)"
+                 :task (apply recipes/process-census! *command-line-args*)}
   recipe:jvms   {:doc "ANALYZE: JVM breakdown - memory totals, categorization (test vs manual), start times."
                  :task recipes/jvm-breakdown!}
   inspect-process {:doc "ANALYZE: Process investigation. Usage: bb inspect-process <name> [--patterns] [--exclude] [--events] [--snapshots] [--limit]"

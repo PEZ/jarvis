@@ -47,32 +47,36 @@
                 "egrep -n 'swapusage|memory_pressure|pageouts|compress|wired|PhysMem|kern.memorystatus' lite-*.txt 2>/dev/null | "
                 "head -200 || echo '(no matches)'")))
 
-(defn ^:export process-census!
-  "Quick census of suspected memory-hoarding processes."
-  []
+(defn- census-one-process
+  "Count and show memory for one process pattern."
+  [pattern]
   (p/shell "bash" "-c"
-           (str "echo '=== Process Census ===' && "
-                "echo \"Timestamp: $(date +%Y%m%d-%H%M%S)\" && "
-                "echo && "
-                "echo '--- Disk Space ---' && "
-                "df -h / | tail -1 | awk '{print \"Available: \" $4 \" (\" $5 \" used)\"}' && "
-                "echo && "
-                "echo '--- clojure-lsp (count + memory) ---' && "
-                "echo \"Count: $(pgrep -f clojure-lsp | wc -l | tr -d ' ')\" && "
-                "ps aux | grep clojure-lsp | grep -v grep | awk '{sum+=$6; print int($6/1024) \" MB  PID \" $2}' | sort -rn && "
-                "echo && "
-                "echo '--- Java/JVM (count + memory) ---' && "
-                "echo \"Count: $(pgrep -f java | wc -l | tr -d ' ')\" && "
-                "ps aux | grep java | grep -v grep | awk '{sum+=$6; print int($6/1024) \" MB  PID \" $2}' | sort -rn | head -10 && "
-                "echo && "
-                "echo '--- VS Code Helpers (count) ---' && "
-                "echo \"Renderer: $(pgrep -f 'Code.*Helper.*Renderer' | wc -l | tr -d ' ')\" && "
-                "echo \"GPU: $(pgrep -f 'Code.*Helper.*GPU' | wc -l | tr -d ' ')\" && "
-                "echo \"Plugin: $(pgrep -f 'Code.*Helper.*Plugin' | wc -l | tr -d ' ')\" && "
-                "echo \"ExtensionHost: $(pgrep -f extensionHost | wc -l | tr -d ' ')\" && "
-                "echo && "
-                "echo '--- Memory Pressure ---' && "
-                "memory_pressure | head -3")))
+           (str "echo '--- " pattern " ---' && "
+                "count=$(pgrep -f '" pattern "' | wc -l | tr -d ' ') && "
+                "echo \"Count: $count\" && "
+                "if [ \"$count\" -gt 0 ]; then "
+                "ps aux | grep -E '" pattern "' | grep -v grep | "
+                "awk '{print int($6/1024) \" MB  PID \" $2}' | sort -rn | head -10; "
+                "fi")))
+
+(defn ^:export process-census!
+  "Quick census of processes. Pass process names/patterns as args, or uses defaults:
+   clojure-lsp, java, Brave, Code.*Insiders"
+  [& args]
+  (let [processes (if (seq args) args config/default-census-processes)]
+    (p/shell "bash" "-c"
+             (str "echo '=== Process Census ===' && "
+                  "echo \"Timestamp: $(date +%Y%m%d-%H%M%S)\" && "
+                  "echo && "
+                  "echo '--- Disk Space ---' && "
+                  "df -h / | tail -1 | awk '{print \"Available: \" $4 \" (\" $5 \" used)\"}' && "
+                  "echo && "
+                  "echo '--- Memory Pressure ---' && "
+                  "memory_pressure | head -3 && "
+                  "echo"))
+    (doseq [proc processes]
+      (census-one-process proc)
+      (println))))
 
 (defn ^:export jvm-breakdown!
   "Detailed JVM process analysis: memory totals, categorization, start times."
