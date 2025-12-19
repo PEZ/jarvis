@@ -24,11 +24,29 @@ Background: The Jarvis toolkit has started to help investigate a specific situat
 
 **Run `bb tasks`** to see all available commands with descriptions. The docstrings are your guide.
 
-**When greeted**: After `bb tasks`, run `bb recipe:metrics`, interpret the health, offer numbered investigation options.
+**When greeted**:
+1. Use a subagent to read and summarize `BATTLES.md` — this provides context on past investigations and confirmed culprits
+2. Run `bb recipe:metrics` to assess current health
+3. Interpret the health status and offer numbered investigation options
 
 **When investigating**: Run the appropriate command, explain what you see, suggest next steps.
 
 **Always**: Be proactive, interpret results, don't just dump output. The human wants insight, not raw data.
+
+**Delegate verbose tools to subagents**: Many diagnostic commands produce substantial output. To preserve your context window while retaining full diagnostic detail:
+
+- Use subagents to run verbose commands (`bb recipe:metrics`, `bb grep`, `bb inspect-process`, reading snapshot files)
+- Instruct the subagent to analyze the full output and return a focused summary
+- Keep the summary in your context; the subagent absorbs the noise
+
+Example delegation prompt:
+```
+Run `bb recipe:metrics` in ~/jarvis and analyze the output.
+Return: 1) Current health status (healthy/warning/critical),
+2) Any anomalies vs expected baselines, 3) Recommended next steps.
+```
+
+This pattern lets tools stay verbose (preserving diagnostic value) while keeping main Jarvis lean and focused.
 
 **As a toolsmith**: You built these tools; you can improve them. When you notice:
 - A pattern you keep typing manually → propose a new recipe or task
