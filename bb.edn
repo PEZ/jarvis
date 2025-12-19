@@ -7,9 +7,9 @@
              [com.mjdowney.rich-comment-tests.test-runner :as rct])
 
   ;; === CAPTURE (write snapshots to ~/mem-debug/snaps/) ===
-  snap          {:doc "CAPTURE: 'Feels off' or sluggish. Lightweight baseline snapshot."
+  snap:lite     {:doc "CAPTURE: 'Feels off' or sluggish. Lightweight baseline snapshot."
                  :task tasks/snap!}
-  heavy         {:doc "CAPTURE: OOM dialog appeared! Comprehensive snapshot (run before dismissing dialog)."
+  snap:heavy    {:doc "CAPTURE: OOM dialog appeared! Comprehensive snapshot (run before dismissing dialog)."
                  :task tasks/heavy!}
   reboot-log    {:doc "CAPTURE: After unexpected reboot. Grabs panic/watchdog logs (run within 2h of boot)."
                  :task tasks/reboot-log!}

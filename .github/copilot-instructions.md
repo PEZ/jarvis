@@ -65,7 +65,7 @@ bb inspect-process java --events "GC|OutOfMemory|killed" --snapshots heavy
 ```
 bb.edn              → Task definitions (entry points)
 scripts/
-  tasks.clj         → Core tasks: snap, heavy, grep, schedule
+  tasks.clj         → Core tasks: snap:lite, snap:heavy, grep, schedule
   recipes.clj       → Canned diagnostics: metrics, panic, reboot, jetsam
   process_inspect.clj → Parameterized process investigation
   config.clj        → Shared paths
@@ -94,7 +94,7 @@ snaps/              → Timestamped output (lite-*.txt, heavy-*.txt, reboot-*.tx
 ## Testing Changes
 
 ```bash
-bb snap && bb latest && bb summarize
+bb snap:lite && bb latest && bb summarize
 bb test  # rich-comment-tests
 ```
 
@@ -104,5 +104,5 @@ Verify exit 0 and files created in `snaps/`.
 
 1. Snapshots always go to `~/mem-debug/snaps/`
 2. Recipe tasks are read-only (never create snapshots)
-3. Only `snap`, `heavy`, `reboot-log` (and scheduled jobs) write files
+3. Only `snap:lite`, `snap:heavy`, `reboot-log` (and scheduled jobs) write files
 4. Output format stable — headers like `=== swap ===` enable grepping
