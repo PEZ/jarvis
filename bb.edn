@@ -1,7 +1,12 @@
 {:paths ["scripts"]
+ :deps {io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3" :git/sha "a8711e9"}}
  :tasks
  {:requires ([tasks]
-             [menu-tasks])
+             [menu-tasks]
+             [com.mjdowney.rich-comment-tests.test-runner :as rct])
+
+  test          {:doc "Run rich comment tests"
+                 :task (rct/run-tests-in-file-tree! {:dirs #{"scripts"}})}
 
   snap          {:doc "Baseline / dialog / feels off. Compact snapshot."
                  :task tasks/snap!}
@@ -31,20 +36,8 @@
   menu:jetsam   {:doc "Kernel memory kills: live logs + historical"
                  :task menu-tasks/jetsam!}
 
-  menu:brave    {:doc "Brave browser: live processes + historical"
-                 :task menu-tasks/brave!}
-
-  menu:vscode   {:doc "VS Code / JVM / Node: live processes + historical"
-                 :task menu-tasks/vscode!}
-
-  menu:clojure-lsp {:doc "clojure-lsp processes: live + historical"
-                    :task menu-tasks/clojure-lsp!}
-
-  menu:insiders {:doc "VS Code Insiders: live + historical snapshots"
-                 :task menu-tasks/insiders!}
-
-  menu:electron {:doc "Electron/Chromium helpers: live + historical"
-                 :task menu-tasks/electron!}
+  inspect-process {:doc "Process inspection: bb inspect-process <name> [--patterns] [--exclude] [--events] [--snapshots] [--limit]"
+                   :task (menu-tasks/process! *command-line-args*)}
 
   menu:metrics  {:doc "Memory metrics: live + historical snapshots"
                  :task menu-tasks/metrics!}
