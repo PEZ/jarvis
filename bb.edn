@@ -6,49 +6,42 @@
              [process-inspect]
              [com.mjdowney.rich-comment-tests.test-runner :as rct])
 
-  test          {:doc "Run rich comment tests"
-                 :task (rct/run-tests-in-file-tree! {:dirs #{"scripts"}})}
-
-  snap          {:doc "Baseline / dialog / feels off. Compact snapshot."
+  ;; === CAPTURE (write snapshots to ~/mem-debug/snaps/) ===
+  snap          {:doc "CAPTURE: 'Feels off' or sluggish. Lightweight baseline snapshot."
                  :task tasks/snap!}
-
-  heavy         {:doc "Severe incident snapshot."
+  heavy         {:doc "CAPTURE: OOM dialog appeared! Comprehensive snapshot (run before dismissing dialog)."
                  :task tasks/heavy!}
-
-  reboot-log    {:doc "After unexpected reboot: panic/watchdog/GPU logs from last 2h."
+  reboot-log    {:doc "CAPTURE: After unexpected reboot. Grabs panic/watchdog logs (run within 2h of boot)."
                  :task tasks/reboot-log!}
 
-  latest        {:doc "Print newest snapshot filename."
-                 :task tasks/latest}
-
-  summarize     {:doc "Summarize newest snapshot (key terms)."
-                 :task tasks/summarize!}
-
-  grep          {:doc "Grep snapshots for a pattern. Usage: bb grep \"pattern\" [glob]"
+  ;; === ANALYZE (read-only, no snapshots created) ===
+  recipe:metrics {:doc "ANALYZE: Live swap/pressure/pageouts + historical trends. Start here for health check."
+                  :task recipes/metrics!}
+  recipe:panic  {:doc "ANALYZE: Panic/watchdog/jetsam events. Use after crashes or freezes."
+                 :task recipes/panic!}
+  recipe:reboot {:doc "ANALYZE: Shutdown cause analysis. Use after unexpected reboots."
+                 :task recipes/reboot!}
+  recipe:jetsam {:doc "ANALYZE: Kernel memory kills. Use when apps are force-quit by system."
+                 :task recipes/jetsam!}
+  inspect-process {:doc "ANALYZE: Process investigation. Usage: bb inspect-process <name> [--patterns] [--exclude] [--events] [--snapshots] [--limit]"
+                   :task (process-inspect/inspect! *command-line-args*)}
+  grep          {:doc "ANALYZE: Search all snapshots. Usage: bb grep \"pattern\" [glob]"
                  :task (tasks/grep-snaps! (first *command-line-args*)
                                           (second *command-line-args*))}
+  summarize     {:doc "ANALYZE: Key metrics from newest snapshot."
+                 :task tasks/summarize!}
+  latest        {:doc "ANALYZE: Print path to newest snapshot."
+                 :task tasks/latest}
 
-  recipe:panic  {:doc "Panic/watchdog/jetsam: live logs + historical"
-                 :task recipes/panic!}
-
-  recipe:reboot {:doc "Reboot cause: live logs + historical"
-                 :task recipes/reboot!}
-
-  recipe:jetsam {:doc "Kernel memory kills: live logs + historical"
-                 :task recipes/jetsam!}
-
-  inspect-process {:doc "Process inspection: bb inspect-process <name> [--patterns] [--exclude] [--events] [--snapshots] [--limit]"
-                   :task (process-inspect/inspect! *command-line-args*)}
-
-  recipe:metrics {:doc "Memory metrics: live + historical snapshots"
-                  :task recipes/metrics!}
-
-  schedule:install   {:doc "Install launchd jobs: lite every 6h, heavy daily at 3am"
+  ;; === SCHEDULING ===
+  schedule:install   {:doc "SCHEDULE: Enable auto-snapshots (lite every 6h, heavy daily 3am)."
                       :task tasks/schedule-install!}
-
-  schedule:uninstall {:doc "Uninstall launchd jobs"
+  schedule:uninstall {:doc "SCHEDULE: Disable auto-snapshots."
                       :task tasks/schedule-uninstall!}
+  schedule:status    {:doc "SCHEDULE: Check if launchd jobs are active."
+                      :task tasks/schedule-status!}
 
-  schedule:status    {:doc "Show status of scheduled jobs"
-                      :task tasks/schedule-status!}}}
+  ;; === DEV ===
+  test          {:doc "DEV: Run rich-comment-tests in scripts/"
+                 :task (rct/run-tests-in-file-tree! {:dirs #{"scripts"}})}}}
 
