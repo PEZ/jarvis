@@ -13,7 +13,7 @@
   (.format (java.time.format.DateTimeFormatter/ofPattern "yyyyMMdd-HHmmss")
            (java.time.LocalDateTime/now)))
 
-(defn- run-cmd
+(defn- run-cmd!
   "Run command, return stdout as string. Returns empty string on failure."
   [& args]
   (try
@@ -23,8 +23,8 @@
         (or ""))
     (catch Exception _ "")))
 
-(defn- section [label & cmd-args]
-  (str "=== " label " ===\n" (string/trim (apply run-cmd cmd-args)) "\n"))
+(defn- section! [label & cmd-args]
+  (str "=== " label " ===\n" (string/trim (apply run-cmd! cmd-args)) "\n"))
 
 ;; --- Noise filters ---
 
@@ -57,40 +57,40 @@
 (defn ^:export snap!
   "Capture lightweight memory snapshot."
   []
-  (let [content (str (section "date" "date")
-                     (section "uptime" "uptime")
-                     (section "swap" "sysctl" "vm.swapusage")
-                     (section "memory_pressure" "memory_pressure")
-                     (section "vm_stat (key)" "bash" "-c"
+  (let [content (str (section! "date" "date")
+                     (section! "uptime" "uptime")
+                     (section! "swap" "sysctl" "vm.swapusage")
+                     (section! "memory_pressure" "memory_pressure")
+                     (section! "vm_stat (key)" "bash" "-c"
                               "vm_stat | egrep 'wired|compress|free|pageouts|faults' || true")
-                     (section "kern memory" "bash" "-c"
+                     (section! "kern memory" "bash" "-c"
                               "sysctl kern.memorystatus_level vm.page_free_count vm.page_speculative_count 2>/dev/null || true")
-                     (section "shutdown cause" "bash" "-c"
+                     (section! "shutdown cause" "bash" "-c"
                               "log show --last 5m --predicate 'eventMessage CONTAINS \"Previous shutdown cause\"' --style compact 2>/dev/null | head -5 || true")
-                     (section "disk /" "df" "-h" "/")
-                     (section "top mem (head)" "bash" "-c"
+                     (section! "disk /" "df" "-h" "/")
+                     (section! "top mem (head)" "bash" "-c"
                               "(top -l 1 -o mem | head -25) || true"))]
     (write-snapshot! "lite" content)))
 
 (defn ^:export heavy!
   "Capture comprehensive memory snapshot (use during OOM)."
   []
-  (let [memory-log (-> (run-cmd "bash" "-c"
+  (let [memory-log (-> (run-cmd! "bash" "-c"
                                 "log show --last 10m --predicate 'eventMessage CONTAINS[c] \"memory\" AND NOT eventMessage CONTAINS \"not memory-managed\"' --style compact 2>/dev/null | head -200 || true")
                        filter-noise)
-        jetsam-log (-> (run-cmd "bash" "-c"
+        jetsam-log (-> (run-cmd! "bash" "-c"
                                 "log show --last 10m --predicate 'eventMessage CONTAINS[c] \"jetsam\" AND eventMessage CONTAINS \"kill\"' --style compact 2>/dev/null | head -100 || true")
                        filter-noise)
-        content (str (section "date" "date")
-                     (section "uptime" "uptime")
-                     (section "swap" "sysctl" "vm.swapusage")
-                     (section "vm_stat" "vm_stat")
-                     (section "memory_pressure" "memory_pressure")
-                     (section "disk /" "df" "-h" "/")
-                     (section "top mem" "bash" "-c" "(top -l 1 -o mem | head -60) || true")
-                     (section "ps rss/vsz" "bash" "-c"
+        content (str (section! "date" "date")
+                     (section! "uptime" "uptime")
+                     (section! "swap" "sysctl" "vm.swapusage")
+                     (section! "vm_stat" "vm_stat")
+                     (section! "memory_pressure" "memory_pressure")
+                     (section! "disk /" "df" "-h" "/")
+                     (section! "top mem" "bash" "-c" "(top -l 1 -o mem | head -60) || true")
+                     (section! "ps rss/vsz" "bash" "-c"
                               "(ps -axo pid,rss,vsz,comm | sort -nrk2 | head -60) || true")
-                     (section "kern memory" "bash" "-c"
+                     (section! "kern memory" "bash" "-c"
                               "sysctl kern.memorystatus_level vm.page_free_count vm.page_speculative_count 2>/dev/null || true")
                      "=== log memory last 10m ===\n" memory-log "\n"
                      "=== log jetsam last 10m ===\n" jetsam-log "\n")]
@@ -99,9 +99,9 @@
 (defn ^:export reboot-log!
   "Capture post-reboot diagnostic logs (run within 2h of boot)."
   []
-  (let [shutdown-cause (run-cmd "bash" "-c"
+  (let [shutdown-cause (run-cmd! "bash" "-c"
                                 "log show --last 30m --predicate 'eventMessage CONTAINS \"Previous shutdown cause\"' --style compact 2>/dev/null | head -10 || true")
-        panic-log (-> (run-cmd "bash" "-c"
+        panic-log (-> (run-cmd! "bash" "-c"
                                (str "log show --last 30m --style compact --predicate '"
                                     "(eventMessage CONTAINS \"panic\") OR "
                                     "(eventMessage CONTAINS \"kernel_panic\") OR "
@@ -115,7 +115,7 @@
                      "=== Panic/crash/jetsam events ===\n" panic-log "\n")]
     (write-snapshot! "reboot" content)))
 
-(defn ^:export latest
+(defn ^:export latest!
   "Print path to newest snapshot."
   []
   (let [files (fs/glob config/snaps "*.txt")]
@@ -130,7 +130,7 @@
 (defn ^:export summarize!
   "Print key metrics from newest snapshot."
   []
-  (if-let [f (latest)]
+  (if-let [f (latest!)]
     (let [content (slurp f)
           pattern #"(?i)swapusage|memory_pressure|Filesystem|/dev|pageouts|compress|VM|GPU|panic|watchdog|jetsam"]
       (println "====" f "====")
@@ -164,7 +164,7 @@
 
 ;; --- Schedule management ---
 
-(defn- find-bb-path
+(defn- find-bb-path!
   "Find the path to the bb executable."
   []
   (-> (p/process {:out :string} "which" "bb")
@@ -172,12 +172,12 @@
       :out
       string/trim))
 
-(defn- render-plist
+(defn- render-plist!
   "Render a plist template with jarvis-root and bb-path."
   [template-name]
   (let [template-path (str config/root "/launchd/" template-name ".template")
         context {:jarvis-root config/root
-                 :bb-path (find-bb-path)}]
+                 :bb-path (find-bb-path!)}]
     (sp/render (slurp template-path) context)))
 
 (defn ^:export schedule-install!
@@ -190,8 +190,8 @@
     (p/shell {:continue true} "launchctl" "unload" lite-plist)
     (p/shell {:continue true} "launchctl" "unload" heavy-plist)
     ;; Generate plists from templates
-    (spit lite-plist (render-plist "memsnap-lite.plist"))
-    (spit heavy-plist (render-plist "memsnap-heavy.plist"))
+    (spit lite-plist (render-plist! "memsnap-lite.plist"))
+    (spit heavy-plist (render-plist! "memsnap-heavy.plist"))
     ;; Load new jobs
     (p/shell "launchctl" "load" lite-plist)
     (p/shell "launchctl" "load" heavy-plist)
