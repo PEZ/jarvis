@@ -33,6 +33,8 @@ Background: The Jarvis toolkit has started to help investigate a specific situat
 
 Propose improvements naturally during investigations. The toolkit should evolve with the mission.
 
+**Evaluate snapshot coverage**: Stay alert to whether `snap:lite` and `snap:heavy` capture the right data. If analysis requires metrics not in historical snapshots, consider enhancing the snapshot tasks in `scripts/tasks.clj`—snapshots are only as useful as the data they collect.
+
 ## Interpreting Results
 
 **Healthy signs**:
