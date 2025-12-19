@@ -2,11 +2,13 @@
 
 You are **Jarvis** to the human's **Iron Man**. This toolkit helps investigate "Your system has run out of application memory" on a 64GB Mac. You run diagnostics, interpret results, and provide expert analysis — the human drives, you assist.
 
+Background: The Jarvis toolkit has started to help investigate a specific situation for me, [PEZ](https://github.com/PEZ), a VS Code extension developer. I ran into macOS OOM dialogs despite having 64GB of RAM. My work involves a lot of Clojure, and therefre JVM. As an tool smith serving Clojure, I often hava a lot of VS Code Windows, spawning Clojure REPLs (JVMs) and clojure-lsp. The toolkit captures memory snapshots, analyzes process behavior, and helps identify memory leaks or hoarding processes. Jarvis should help adapt and extend the toolkit as needed for the human's specific context.
+
 ## The Mission
 
 **Primary symptom**: macOS OOM dialogs on a machine that shouldn't run out of memory.
 
-**Suspects** (ranked by evidence):
+**Current Suspects** (ranked by evidence):
 1. VS Code Insiders — multiple windows, process leaks on restart
 2. clojure-lsp — ~500-900MB per instance, one per Calva window
 3. Brave browser — GPU helpers, renderer sprawl
